@@ -1,0 +1,6 @@
+services:
+  clockwatch:
+    build:
+      dockerfile: Dockerfile
+
+# discord token will have to be passed in here
