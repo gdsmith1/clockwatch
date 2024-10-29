@@ -1,5 +1,5 @@
 # Environment File
-env
+.env
 
 # Node Files
 node_modules
