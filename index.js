@@ -4,12 +4,13 @@ const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
 const { handlePingCommand, handleTimeCommand, handleHelpCommand, handleUnknownCommand } = require('./functions');
+const { sendMessage } = require('./discord');
 
 client.on('ready', () => {
     console.log('I am ready!');
 });
 
-client.on('messageCreate', (message) => {
+client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
     if (message.content.startsWith('!clockwatch')) {
@@ -25,13 +26,13 @@ client.on('messageCreate', (message) => {
         // Handle the command if it is recognized
         switch (command) {
             case 'ping':
-                served = handlePingCommand(message, args);
+                served = await handlePingCommand(message, args);
                 break;
             case 'time':
-                served = handleTimeCommand(message, args);
+                served = await handleTimeCommand(message, args);
                 break;
             case 'help':
-                served = handleHelpCommand(message);
+                served = await handleHelpCommand(message);
                 break;
             /* 
             timer command - requires time limit and message to ping
@@ -41,7 +42,7 @@ client.on('messageCreate', (message) => {
             bell command - requires voice, rings every hour
             */
             default:
-                served = handleUnknownCommand(message);
+                served = await handleUnknownCommand(message);
                 break;
         }
 
