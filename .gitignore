@@ -2,5 +2,5 @@
 .env
 
 # Node Files
-node_modules
-coverage
+node_modules/
+coverage/

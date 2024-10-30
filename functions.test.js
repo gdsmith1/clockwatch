@@ -35,6 +35,7 @@ describe('handlePingCommand', () => {
         expect(result).toBe(false);
         expect(sendMessage).not.toHaveBeenCalled();
     });
+});
 
     describe('handleTimeCommand', () => {
         it('should prompt for timezone when args length is less than 3', async () => {
@@ -88,21 +89,20 @@ describe('handlePingCommand', () => {
         });
     });
 
-    describe('handleHelpCommand', () => {
-        it('should respond with help message', async () => {
-            const message = { channel: { send: jest.fn() } };
+describe('handleHelpCommand', () => {
+    it('should respond with help message', async () => {
+        const message = { channel: { send: jest.fn() } };
 
-            const result = await handleHelpCommand(message);
+        const result = await handleHelpCommand(message);
 
-            expect(result).toBe(true);
-            expect(sendMessage).toHaveBeenCalledWith(
-                message,
-                'Available commands:\n' +
-                '`!clockwatch ping` - check if the bot is online\n' +
-                '`!clockwatch time [timezone]` - get the current time in a timezone'
-            );
-        });
+        expect(result).toBe(true);
+        expect(sendMessage).toHaveBeenCalledWith(
+            message,
+            'Available commands:\n' +
+            '`!clockwatch ping` - check if the bot is online\n' +
+            '`!clockwatch time [timezone]` - get the current time in a timezone'
+        );
     });
-
-
 });
+
+

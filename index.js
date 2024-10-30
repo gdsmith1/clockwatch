@@ -4,7 +4,6 @@ const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
 const { handlePingCommand, handleTimeCommand, handleHelpCommand, handleUnknownCommand } = require('./functions');
-const { sendMessage } = require('./discord');
 
 client.on('ready', () => {
     console.log('I am ready!');
