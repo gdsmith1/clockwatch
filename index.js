@@ -3,7 +3,7 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
-const { handlePingCommand, handleTimeCommand, handleHelpCommand, handleUnknownCommand } = require('./functions');
+const { handlePingCommand, handleTimeCommand, handleHelpCommand, handleUnknownCommand, handleTimerCommand } = require('./functions');
 
 client.on('ready', () => {
     console.log('I am ready!');
@@ -32,6 +32,9 @@ client.on('messageCreate', async (message) => {
                 break;
             case 'help':
                 served = await handleHelpCommand(message);
+                break;
+            case 'timer':
+                served = await handleTimerCommand(message, args);
                 break;
             /* 
             timer command - requires time limit and message to ping
