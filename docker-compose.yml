@@ -9,5 +9,3 @@ services:
     build:
       dockerfile: Dockerfile
     command: npm test
-    environment:
-      - DISCORD_TOKEN=${DISCORD_TOKEN}

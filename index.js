@@ -37,8 +37,6 @@ client.on('messageCreate', async (message) => {
                 served = await handleTimerCommand(message, args);
                 break;
             /* 
-            timer command - requires time limit and message to ping
-
             alarm command - requires end time, timezone, and message to ping
 
             bell command - requires voice, rings every hour
