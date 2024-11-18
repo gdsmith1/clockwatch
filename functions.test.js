@@ -6,6 +6,7 @@ const {
     handleTimerCommand,
     handleShowCommand,
     handleResetCommand,
+    handleSoonCommand
 } = require('./functions');
 
 const { sendMessage } = require('./discord');
@@ -477,6 +478,29 @@ describe('handleTimerCommand', () => {
         expect(sendMessage).toHaveBeenCalledWith(message, '<@12345> : 1 min have passed.');
         jest.useRealTimers();
     });
+
+    describe('handleTimerCommand with reset', () => {
+    it('should not send a timer elapsed message if the timer is reset before it elapses', async () => {
+        jest.useFakeTimers();
+        const message = { channel: { send: jest.fn() }, author: { id: '12345' } };
+        const args = ['!clockwatch', 'timer', '1', 'min'];
+
+        const result = await handleTimerCommand(message, args);
+
+        expect(result).toBe(true);
+        expect(sendMessage).toHaveBeenCalledWith(message, 'Timer set for 1 min.');
+
+        // Run the reset command before the timer elapses
+        await handleResetCommand(message);
+
+        // Advance the timers by 1 minute
+        jest.advanceTimersByTime(60000);
+
+        // Check that no timer elapsed message was sent
+        expect(sendMessage).not.toHaveBeenCalledWith(message, '<@12345> : 1 min have passed.');
+        jest.useRealTimers();
+    });
+});
 });
 
 describe('handleShowCommand', () => {
@@ -562,5 +586,291 @@ describe('handleResetCommand', () => {
 
         expect(result).toBe(false);
         expect(console.error).toHaveBeenCalledWith('Error sending reset command message:', expect.any(Error));
+    });
+});
+
+describe('handleSoonCommand', () => {
+    beforeEach(() => {
+        handleResetCommand({ channel: { send: jest.fn() } });
+        sendMessage.mockClear();
+    });
+
+    it('should prompt for unit when args length is less than 3', async () => {
+        const message = { channel: { send: jest.fn() } };
+        const args = ['!clockwatch', 'soon'];
+
+        const result = await handleSoonCommand(message, args);
+
+        expect(result).toBe(true);
+        expect(sendMessage).toHaveBeenCalledWith(message, 'Please provide a unit (seconds for up to 15 minutes, minutes for up to 90 minutes, or hours for up to 6 hours).');
+    });
+
+    it('should set a timer for a random duration in seconds', async () => {
+        jest.useFakeTimers();
+        const message = { channel: { send: jest.fn() }, author: { id: '12345', username: 'user1' } };
+        const args = ['!clockwatch', 'soon', 'seconds'];
+
+        const result = await handleSoonCommand(message, args);
+
+        expect(result).toBe(true);
+        expect(sendMessage).toHaveBeenCalledWith(message, expect.stringContaining('Timer set for a random duration of'));
+        
+        // Advance the timers by a random duration (simulate the timer elapsing)
+        const timerDuration = sendMessage.mock.calls[0][1].match(/(\d+) seconds/)[1] * 1000;
+        jest.advanceTimersByTime(timerDuration);
+
+        // Check that the timer elapsed message was sent
+        expect(sendMessage).toHaveBeenCalledWith(message, expect.stringContaining('<@12345> :'));
+        jest.useRealTimers();
+    });
+
+    it('should set a timer for a random duration in minutes', async () => {
+        jest.useFakeTimers();
+        const message = { channel: { send: jest.fn() }, author: { id: '12345', username: 'user1' } };
+        const args = ['!clockwatch', 'soon', 'minutes'];
+
+        const result = await handleSoonCommand(message, args);
+
+        expect(result).toBe(true);
+        expect(sendMessage).toHaveBeenCalledWith(message, expect.stringContaining('Timer set for a random duration of'));
+        
+        // Advance the timers by a random duration (simulate the timer elapsing)
+        const timerDuration = sendMessage.mock.calls[0][1].match(/(\d+) minutes/)[1] * 60 * 1000;
+        jest.advanceTimersByTime(timerDuration);
+
+        // Check that the timer elapsed message was sent
+        expect(sendMessage).toHaveBeenCalledWith(message, expect.stringContaining('<@12345> :'));
+        jest.useRealTimers();
+    });
+
+    it('should set a timer for a random duration in hours', async () => {
+        jest.useFakeTimers();
+        const message = { channel: { send: jest.fn() }, author: { id: '12345', username: 'user1' } };
+        const args = ['!clockwatch', 'soon', 'hours'];
+
+        const result = await handleSoonCommand(message, args);
+
+        expect(result).toBe(true);
+        expect(sendMessage).toHaveBeenCalledWith(message, expect.stringContaining('Timer set for a random duration of'));
+        
+        // Advance the timers by a random duration (simulate the timer elapsing)
+        const timerDuration = sendMessage.mock.calls[0][1].match(/(\d+) hours/)[1] * 60 * 60 * 1000;
+        jest.advanceTimersByTime(timerDuration);
+
+        // Check that the timer elapsed message was sent
+        expect(sendMessage).toHaveBeenCalledWith(message, expect.stringContaining('<@12345> :'));
+        jest.useRealTimers();
+    });
+
+    it('should handle invalid unit', async () => {
+        const message = { channel: { send: jest.fn() } };
+        const args = ['!clockwatch', 'soon', 'invalidUnit'];
+
+        const result = await handleSoonCommand(message, args);
+
+        expect(result).toBe(true);
+        expect(sendMessage).toHaveBeenCalledWith(message, 'Invalid unit. Please use seconds, minutes, or hours.');
+    });
+
+    it('should handle error when sending unit prompt', async () => {
+        const message = { channel: { send: jest.fn() } };
+        const args = ['!clockwatch', 'soon'];
+
+        sendMessage.mockImplementationOnce(() => {
+            throw new Error('Mocked error');
+        });
+
+        const result = await handleSoonCommand(message, args);
+
+        expect(result).toBe(false);
+        expect(console.error).toHaveBeenCalledWith('Error sending unit prompt:', expect.any(Error));
+    });
+
+    it('should handle error when sending invalid unit message', async () => {
+        const message = { channel: { send: jest.fn() } };
+        const args = ['!clockwatch', 'soon', 'invalidUnit'];
+
+        sendMessage.mockImplementationOnce(() => {
+            throw new Error('Mocked error');
+        });
+
+        const result = await handleSoonCommand(message, args);
+
+        expect(result).toBe(false);
+        expect(console.error).toHaveBeenCalledWith('Error sending invalid unit message:', expect.any(Error));
+    });
+
+    it('should handle error when sending timer message', async () => {
+        const message = { channel: { send: jest.fn() }, author: { id: '12345', username: 'user1' } };
+        const args = ['!clockwatch', 'soon', 'minutes'];
+
+        sendMessage.mockImplementationOnce(() => {
+            throw new Error('Mocked error');
+        });
+
+        const result = await handleSoonCommand(message, args);
+
+        expect(result).toBe(false);
+        expect(console.error).toHaveBeenCalledWith('Error sending timer message:', expect.any(Error));
+    });
+
+    it('should handle error when sending timer elapsed message', async () => {
+        jest.useFakeTimers();
+        const message = { channel: { send: jest.fn() }, author: { id: '12345', username: 'user1' } };
+        const args = ['!clockwatch', 'soon', 'minutes'];
+
+        const result = await handleSoonCommand(message, args);
+
+        expect(result).toBe(true);
+        expect(sendMessage).toHaveBeenCalledWith(message, expect.stringContaining('Timer set for a random duration of'));
+
+        // Mock error when sending the timer elapsed message
+        sendMessage.mockImplementationOnce(() => {
+            throw new Error('Mocked error');
+        });
+
+        // Advance the timers by a random duration (simulate the timer elapsing)
+        const timerDuration = sendMessage.mock.calls[0][1].match(/(\d+) minutes/)[1] * 60 * 1000;
+        jest.advanceTimersByTime(timerDuration);
+
+        // Check that the error was logged
+        expect(console.error).toHaveBeenCalledWith('Error sending timer message:', expect.any(Error));
+        jest.useRealTimers();
+    });
+
+    it('should not send a timer elapsed message if the timer is reset before it elapses', async () => {
+        jest.useFakeTimers();
+        const message = { channel: { send: jest.fn() }, author: { id: '12345', username: 'user1' } };
+        const args = ['!clockwatch', 'soon', 'minutes'];
+    
+        const result = await handleSoonCommand(message, args);
+    
+        expect(result).toBe(true);
+        expect(sendMessage).toHaveBeenCalledWith(message, expect.stringContaining('Timer set for a random duration of'));
+    
+        // Run the reset command before the timer elapses
+        await handleResetCommand(message);
+    
+        // Advance the timers by a random duration (simulate the timer elapsing)
+        const timerDuration = sendMessage.mock.calls[0][1].match(/(\d+) minutes/)[1] * 60 * 1000;
+        jest.advanceTimersByTime(timerDuration);
+    
+        // Check that no timer elapsed message was sent
+        expect(sendMessage).not.toHaveBeenCalledWith(message, expect.stringContaining('<@12345> :'));
+        jest.useRealTimers();
+    });
+
+    it('should set a timer for a random duration in sec', async () => {
+        jest.useFakeTimers();
+        const message = { channel: { send: jest.fn() }, author: { id: '12345', username: 'user1' } };
+        const args = ['!clockwatch', 'soon', 'sec'];
+
+        const result = await handleSoonCommand(message, args);
+
+        expect(result).toBe(true);
+        expect(sendMessage).toHaveBeenCalledWith(message, expect.stringContaining('Timer set for a random duration of'));
+
+        // Advance the timers by a random duration (simulate the timer elapsing)
+        const timerDuration = sendMessage.mock.calls[0][1].match(/(\d+) seconds/)[1] * 1000;
+        jest.advanceTimersByTime(timerDuration);
+
+        // Check that the timer elapsed message was sent
+        expect(sendMessage).toHaveBeenCalledWith(message, expect.stringContaining('<@12345> :'));
+        jest.useRealTimers();
+    });
+
+    it('should set a timer for a random duration in second', async () => {
+        jest.useFakeTimers();
+        const message = { channel: { send: jest.fn() }, author: { id: '12345', username: 'user1' } };
+        const args = ['!clockwatch', 'soon', 'second'];
+
+        const result = await handleSoonCommand(message, args);
+
+        expect(result).toBe(true);
+        expect(sendMessage).toHaveBeenCalledWith(message, expect.stringContaining('Timer set for a random duration of'));
+
+        // Advance the timers by a random duration (simulate the timer elapsing)
+        const timerDuration = sendMessage.mock.calls[0][1].match(/(\d+) seconds/)[1] * 1000;
+        jest.advanceTimersByTime(timerDuration);
+
+        // Check that the timer elapsed message was sent
+        expect(sendMessage).toHaveBeenCalledWith(message, expect.stringContaining('<@12345> :'));
+        jest.useRealTimers();
+    });
+
+    it('should set a timer for a random duration in min', async () => {
+        jest.useFakeTimers();
+        const message = { channel: { send: jest.fn() }, author: { id: '12345', username: 'user1' } };
+        const args = ['!clockwatch', 'soon', 'min'];
+
+        const result = await handleSoonCommand(message, args);
+
+        expect(result).toBe(true);
+        expect(sendMessage).toHaveBeenCalledWith(message, expect.stringContaining('Timer set for a random duration of'));
+
+        // Advance the timers by a random duration (simulate the timer elapsing)
+        const timerDuration = sendMessage.mock.calls[0][1].match(/(\d+) minutes/)[1] * 60 * 1000;
+        jest.advanceTimersByTime(timerDuration);
+
+        // Check that the timer elapsed message was sent
+        expect(sendMessage).toHaveBeenCalledWith(message, expect.stringContaining('<@12345> :'));
+        jest.useRealTimers();
+    });
+
+    it('should set a timer for a random duration in minute', async () => {
+        jest.useFakeTimers();
+        const message = { channel: { send: jest.fn() }, author: { id: '12345', username: 'user1' } };
+        const args = ['!clockwatch', 'soon', 'minute'];
+
+        const result = await handleSoonCommand(message, args);
+
+        expect(result).toBe(true);
+        expect(sendMessage).toHaveBeenCalledWith(message, expect.stringContaining('Timer set for a random duration of'));
+
+        // Advance the timers by a random duration (simulate the timer elapsing)
+        const timerDuration = sendMessage.mock.calls[0][1].match(/(\d+) minutes/)[1] * 60 * 1000;
+        jest.advanceTimersByTime(timerDuration);
+
+        // Check that the timer elapsed message was sent
+        expect(sendMessage).toHaveBeenCalledWith(message, expect.stringContaining('<@12345> :'));
+        jest.useRealTimers();
+    });
+
+    it('should set a timer for a random duration in hour', async () => {
+        jest.useFakeTimers();
+        const message = { channel: { send: jest.fn() }, author: { id: '12345', username: 'user1' } };
+        const args = ['!clockwatch', 'soon', 'hour'];
+
+        const result = await handleSoonCommand(message, args);
+
+        expect(result).toBe(true);
+        expect(sendMessage).toHaveBeenCalledWith(message, expect.stringContaining('Timer set for a random duration of'));
+
+        // Advance the timers by a random duration (simulate the timer elapsing)
+        const timerDuration = sendMessage.mock.calls[0][1].match(/(\d+) hours/)[1] * 60 * 60 * 1000;
+        jest.advanceTimersByTime(timerDuration);
+
+        // Check that the timer elapsed message was sent
+        expect(sendMessage).toHaveBeenCalledWith(message, expect.stringContaining('<@12345> :'));
+        jest.useRealTimers();
+    });
+
+    it('should set a timer for a random duration in hours', async () => {
+        jest.useFakeTimers();
+        const message = { channel: { send: jest.fn() }, author: { id: '12345', username: 'user1' } };
+        const args = ['!clockwatch', 'soon', 'hours'];
+
+        const result = await handleSoonCommand(message, args);
+
+        expect(result).toBe(true);
+        expect(sendMessage).toHaveBeenCalledWith(message, expect.stringContaining('Timer set for a random duration of'));
+
+        // Advance the timers by a random duration (simulate the timer elapsing)
+        const timerDuration = sendMessage.mock.calls[0][1].match(/(\d+) hours/)[1] * 60 * 60 * 1000;
+        jest.advanceTimersByTime(timerDuration);
+
+        // Check that the timer elapsed message was sent
+        expect(sendMessage).toHaveBeenCalledWith(message, expect.stringContaining('<@12345> :'));
+        jest.useRealTimers();
     });
 });

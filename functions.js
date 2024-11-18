@@ -1,4 +1,6 @@
 const { sendMessage } = require('./discord');
+const { v4: uuidv4 } = require('uuid');
+
 
 let activeTimers = [];
 
@@ -79,7 +81,6 @@ async function handleHelpCommand(message) {
     }
     return true;
 }
-
 async function handleTimerCommand(message, args) {
     if (args.length < 4) {
         try {
@@ -131,7 +132,6 @@ async function handleTimerCommand(message, args) {
                 console.error('Error sending unit message:', error);
                 return false;
             }
-            
     }
 
     if (milliseconds > 86400000) {
@@ -145,20 +145,24 @@ async function handleTimerCommand(message, args) {
         return false;
     }
 
+    const timerId = uuidv4(); // Generate a unique identifier for the timer
+
     try {
         await sendMessage(message, `Timer set for ${duration} ${unit}.`);
-        activeTimers.push({ user: message.author.username, duration, unit, endTime: Date.now() + milliseconds });
+        activeTimers.push({ id: timerId, user: message.author.username, duration, unit, endTime: Date.now() + milliseconds });
     }
     catch (error) {
         console.error('Error sending timer message:', error);
         return false;
     }
 
-    
     setTimeout(async () => {
         try {
+            const timer = activeTimers.find(timer => timer.id === timerId);
+            if (timer) {
                 await sendMessage(message, `<@${message.author.id}> : ${duration} ${unit} have passed.`);
                 activeTimers = activeTimers.filter(timer => timer.endTime > Date.now());
+            }
         }
         catch (error) {
             console.error('Error sending timer message:', error);
@@ -176,8 +180,8 @@ async function handleShowCommand(message) {
         } else {
             let timerList = 'Active timers:\n';
             activeTimers.forEach(timer => {
-                timerList += `${timer.user}: ${timer.duration} ${timer.unit} (ends in ${Math.round((timer.endTime - Date.now()) / 1000)} seconds)\n`;
-            });
+                const timeLeftInMinutes = Math.round((timer.endTime - Date.now()) / 60000); // Convert milliseconds to minutes
+                timerList += `${timer.user}: ${timer.duration} ${timer.unit} (ends in ${timeLeftInMinutes} minutes)\n`;            });
             await sendMessage(message, timerList);
         }
         console.log('Show command message sent');
@@ -200,6 +204,94 @@ async function handleResetCommand(message) {
     return true;
 }
 
+async function handleSoonCommand(message, args) {
+    if (args.length < 3) {
+        try {
+            await sendMessage(message, 'Please provide a unit (seconds for up to 15 minutes, minutes for up to 90 minutes, or hours for up to 6 hours).');
+            return true;
+        }
+        catch (error) {
+            console.error('Error sending unit prompt:', error);
+            return false;
+        }
+    }
+
+    const unit = args[2].toLowerCase();
+    let maxDuration;
+    let unitLabel;
+
+    switch (unit) {
+        case 'sec':
+        case 'second':
+        case 'seconds':
+            maxDuration = 900; // Maximum 15 minutes
+            unitLabel = 'seconds';
+            break;
+        case 'min':
+        case 'minute':
+        case 'minutes':
+            maxDuration = 90; // Maximum 90 minutes
+            unitLabel = 'minutes';
+            break;
+        case 'hour':
+        case 'hours':
+            maxDuration = 6; // Maximum 6 hours
+            unitLabel = 'hours';
+            break;
+        default:
+            try {
+                await sendMessage(message, 'Invalid unit. Please use seconds, minutes, or hours.');
+                return true;
+            }
+            catch (error) {
+                console.error('Error sending invalid unit message:', error);
+                return false;
+            }
+    }
+
+    const duration = Math.floor(Math.random() * maxDuration) + 1; // Random duration between 1 and maxDuration
+    let milliseconds;
+
+    switch (unitLabel) {
+        case 'seconds':
+            milliseconds = duration * 1000;
+            break;
+        case 'minutes':
+            milliseconds = duration * 60 * 1000;
+            break;
+        case 'hours':
+            milliseconds = duration * 60 * 60 * 1000;
+            break;
+    }
+
+    const timerId = uuidv4(); // Generate a unique identifier for the timer
+
+    try {
+        await sendMessage(message, `Timer set for a random duration of ${duration} ${unitLabel}.`);
+        activeTimers.push({ id: timerId, user: message.author.username, duration, unit: unitLabel, endTime: Date.now() + milliseconds });
+    }
+    catch (error) {
+        console.error('Error sending timer message:', error);
+        return false;
+    }
+
+    setTimeout(async () => {
+        try {
+            const timer = activeTimers.find(timer => timer.id === timerId);
+            if (timer) {
+                await sendMessage(message, `<@${message.author.id}> : ${duration} ${unitLabel} have passed.`);
+                activeTimers = activeTimers.filter(timer => timer.endTime > Date.now());
+            }
+        }
+        catch (error) {
+            console.error('Error sending timer message:', error);
+            return false;
+        }
+    }, milliseconds);
+
+    return true;
+}
+
 module.exports = {
     handlePingCommand,
     handleTimeCommand,
@@ -208,4 +300,5 @@ module.exports = {
     handleTimerCommand,
     handleShowCommand,
     handleResetCommand,
+    handleSoonCommand,
 };

@@ -3,7 +3,7 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
-const { handlePingCommand, handleTimeCommand, handleHelpCommand, handleUnknownCommand, handleTimerCommand, handleShowCommand, handleResetCommand } = require('./functions');
+const { handlePingCommand, handleTimeCommand, handleHelpCommand, handleUnknownCommand, handleTimerCommand, handleShowCommand, handleResetCommand, handleSoonCommand } = require('./functions');
 
 client.on('ready', () => {
     console.log('I am ready!');
@@ -41,6 +41,9 @@ client.on('messageCreate', async (message) => {
                 break;
             case 'reset':
                 served = await handleResetCommand(message);
+                break;
+            case 'soon':
+                served = await handleSoonCommand(message, args);
                 break;
             /* 
             alarm command - requires end time, timezone, and message to ping
