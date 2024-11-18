@@ -1,5 +1,6 @@
 const { sendMessage } = require('./discord');
 
+let activeTimers = [];
 
 async function handlePingCommand(message, args) {
     if (args.length < 3) {
@@ -66,7 +67,10 @@ async function handleHelpCommand(message) {
             message,
             'Available commands:\n' +
             '`!clockwatch ping` - check if the bot is online\n' +
-            '`!clockwatch time [timezone]` - get the current time in a timezone'
+            '`!clockwatch time [timezone]` - get the current time in a timezone\n' +
+            '`!clockwatch timer [duration] [unit]` - set a timer for a duration (e.g., 5 min, 2 hours)\n' +
+            '`!clockwatch show` - show active timers' +
+            '`!clockwatch reset` - reset all timers'
         );
         console.log('Help message sent');
     } catch (error) {
@@ -143,6 +147,7 @@ async function handleTimerCommand(message, args) {
 
     try {
         await sendMessage(message, `Timer set for ${duration} ${unit}.`);
+        activeTimers.push({ user: message.author.username, duration, unit, endTime: Date.now() + milliseconds });
     }
     catch (error) {
         console.error('Error sending timer message:', error);
@@ -152,7 +157,8 @@ async function handleTimerCommand(message, args) {
     
     setTimeout(async () => {
         try {
-            await sendMessage(message, `<@${message.author.id}> : ${duration} ${unit} have passed.`);
+                await sendMessage(message, `<@${message.author.id}> : ${duration} ${unit} have passed.`);
+                activeTimers = activeTimers.filter(timer => timer.endTime > Date.now());
         }
         catch (error) {
             console.error('Error sending timer message:', error);
@@ -163,13 +169,43 @@ async function handleTimerCommand(message, args) {
     return true;
 }
 
+async function handleShowCommand(message) {
+    try {
+        if (activeTimers.length === 0) {
+            await sendMessage(message, 'No active timers.');
+        } else {
+            let timerList = 'Active timers:\n';
+            activeTimers.forEach(timer => {
+                timerList += `${timer.user}: ${timer.duration} ${timer.unit} (ends in ${Math.round((timer.endTime - Date.now()) / 1000)} seconds)\n`;
+            });
+            await sendMessage(message, timerList);
+        }
+        console.log('Show command message sent');
+    } catch (error) {
+        console.error('Error sending show command message:', error);
+        return false;
+    }
+    return true;
+}
 
-
+async function handleResetCommand(message) {
+    activeTimers = [];
+    try {
+        await sendMessage(message, 'All timers reset.');
+        console.log('Reset command message sent');
+    } catch (error) {
+        console.error('Error sending reset command message:', error);
+        return false;
+    }
+    return true;
+}
 
 module.exports = {
     handlePingCommand,
     handleTimeCommand,
     handleUnknownCommand,
     handleHelpCommand,
-    handleTimerCommand
+    handleTimerCommand,
+    handleShowCommand,
+    handleResetCommand,
 };

@@ -3,7 +3,7 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
-const { handlePingCommand, handleTimeCommand, handleHelpCommand, handleUnknownCommand, handleTimerCommand } = require('./functions');
+const { handlePingCommand, handleTimeCommand, handleHelpCommand, handleUnknownCommand, handleTimerCommand, handleShowCommand, handleResetCommand } = require('./functions');
 
 client.on('ready', () => {
     console.log('I am ready!');
@@ -36,10 +36,24 @@ client.on('messageCreate', async (message) => {
             case 'timer':
                 served = await handleTimerCommand(message, args);
                 break;
+            case 'show':
+                served = await handleShowCommand(message);
+                break;
+            case 'reset':
+                served = await handleResetCommand(message);
+                break;
             /* 
             alarm command - requires end time, timezone, and message to ping
 
             bell command - requires voice, rings every hour
+
+            soon command - choose mins or hours - random time
+
+            show command - shows all active timers
+
+            movespam command - moves a user between channels to spam them
+
+            logs command - shows the logs of the server
             */
             default:
                 served = await handleUnknownCommand(message);
@@ -55,7 +69,29 @@ client.on('messageCreate', async (message) => {
     }
 });
 
+client.on('error', (err) => {
+    console.error('Discord client error:', err);
+});
+
+client.on('reconnecting', () => {
+    console.log('Reconnecting to Discord...');
+});
+
+client.on('disconnect', (event) => {
+    console.log('Disconnected from Discord:', event);
+    retryConnection();
+});
 
 
+function retryConnection() {
+    console.log('Attempting to reconnect...');
+    client.login(process.env.DISCORD_TOKEN).catch((err) => {
+        console.error('Failed to reconnect:', err);
+        setTimeout(retryConnection, 5000); // Retry after 5 seconds
+    });
+}
 
-client.login(process.env.DISCORD_TOKEN).catch(console.error);
+client.login(process.env.DISCORD_TOKEN).catch((err) => {
+    console.error('Failed to login with bot token:', err);
+    retryConnection();
+});

@@ -4,6 +4,8 @@ const {
     handleUnknownCommand,
     handleHelpCommand,
     handleTimerCommand,
+    handleShowCommand,
+    handleResetCommand,
 } = require('./functions');
 
 const { sendMessage } = require('./discord');
@@ -162,7 +164,10 @@ describe('handleHelpCommand', () => {
             message,
             'Available commands:\n' +
             '`!clockwatch ping` - check if the bot is online\n' +
-            '`!clockwatch time [timezone]` - get the current time in a timezone'
+            '`!clockwatch time [timezone]` - get the current time in a timezone\n' +
+            '`!clockwatch timer [duration] [unit]` - set a timer for a duration (e.g., 5 min, 2 hours)\n' +
+            '`!clockwatch show` - show active timers' +
+            '`!clockwatch reset` - reset all timers'
         );
     });
 
@@ -455,5 +460,107 @@ describe('handleTimerCommand', () => {
     
         expect(result).toBe(false);
         expect(console.error).toHaveBeenCalledWith('Error sending timer message:', expect.any(Error));
+    });
+
+    it('should set a timer and notify when time is up', async () => {
+        jest.useFakeTimers();
+        const message = { channel: { send: jest.fn() }, author: { id: '12345' } };
+        const args = ['!clockwatch', 'timer', '1', 'min'];
+
+        const result = await handleTimerCommand(message, args);
+
+        expect(result).toBe(true);
+        expect(sendMessage).toHaveBeenCalledWith(message, 'Timer set for 1 min.');
+
+        jest.advanceTimersByTime(60000);
+
+        expect(sendMessage).toHaveBeenCalledWith(message, '<@12345> : 1 min have passed.');
+        jest.useRealTimers();
+    });
+});
+
+describe('handleShowCommand', () => {
+    beforeEach(() => {
+        handleResetCommand({ channel: { send: jest.fn() } });
+        sendMessage.mockClear();
+    });
+
+    it('should respond with no active timers message when there are no timers', async () => {
+        const message = { channel: { send: jest.fn() } };
+
+        const result = await handleShowCommand(message);
+
+        expect(result).toBe(true);
+        const calls = sendMessage.mock.calls.filter(call => call[0] === message);
+        expect(calls).toEqual([[message, 'No active timers.']]);
+    });
+
+    it('should respond with active timers list when there are timers', async () => {
+        const message = { channel: { send: jest.fn() } };
+        jest.useFakeTimers();
+        // Make some timers
+        const message1 = { channel: { send: jest.fn() }, author: { username: 'user1' } };
+        const args1 = ['!clockwatch', 'timer', '5', 'min'];
+        await handleTimerCommand(message1, args1);
+    
+        const message2 = { channel: { send: jest.fn() }, author: { username: 'user2' } };
+        const args2 = ['!clockwatch', 'timer', '1', 'hour'];
+        await handleTimerCommand(message2, args2);
+    
+        const result = await handleShowCommand(message);
+    
+        expect(result).toBe(true);
+        const calls = sendMessage.mock.calls.filter(call => call[0] === message);
+        expect(calls).toEqual(expect.arrayContaining([
+            [message, expect.stringContaining('Active timers:\nuser1: 5 min')],
+            [message, expect.stringContaining('user2: 1 hour')]
+        ]));
+    });
+
+    it('should handle error when sending show command message', async () => {
+        const message = { channel: { send: jest.fn() } };
+
+        sendMessage.mockImplementationOnce(() => {
+            throw new Error('Mocked error');
+        });
+
+        const result = await handleShowCommand(message);
+
+        expect(result).toBe(false);
+        expect(console.error).toHaveBeenCalledWith('Error sending show command message:', expect.any(Error));
+    });
+});
+
+describe('handleResetCommand', () => {
+
+    it('should reset all timers and send reset message', async () => {
+        const message = { channel: { send: jest.fn() } };
+
+        // Make some timers
+        const message1 = { channel: { send: jest.fn() }, author: { id: 'user1' } };
+        const args1 = ['!clockwatch', 'timer', '5', 'min'];
+        await handleTimerCommand(message1, args1);
+
+        const message2 = { channel: { send: jest.fn() }, author: { id: 'user2' } };
+        const args2 = ['!clockwatch', 'timer', '1', 'hour'];
+        await handleTimerCommand(message2, args2);
+
+        const result = await handleResetCommand(message);
+
+        expect(result).toBe(true);
+        expect(sendMessage).toHaveBeenCalledWith(message, 'All timers reset.');
+    });
+
+    it('should handle error when sending reset message', async () => {
+        const message = { channel: { send: jest.fn() } };
+
+        sendMessage.mockImplementationOnce(() => {
+            throw new Error('Mocked error');
+        });
+
+        const result = await handleResetCommand(message);
+
+        expect(result).toBe(false);
+        expect(console.error).toHaveBeenCalledWith('Error sending reset command message:', expect.any(Error));
     });
 });
