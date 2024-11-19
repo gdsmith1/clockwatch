@@ -72,8 +72,10 @@ client.on('messageCreate', async (message) => {
     }
 });
 
+// Handle discord errors and reconnect
 client.on('error', (err) => {
     console.error('Discord client error:', err);
+    retryConnection();
 });
 
 client.on('reconnecting', () => {
@@ -85,7 +87,6 @@ client.on('disconnect', (event) => {
     retryConnection();
 });
 
-
 function retryConnection() {
     console.log('Attempting to reconnect...');
     client.login(process.env.DISCORD_TOKEN).catch((err) => {
@@ -96,5 +97,15 @@ function retryConnection() {
 
 client.login(process.env.DISCORD_TOKEN).catch((err) => {
     console.error('Failed to login with bot token:', err);
+    retryConnection();
+});
+
+// Handle global errors
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception thrown:', err);
     retryConnection();
 });
