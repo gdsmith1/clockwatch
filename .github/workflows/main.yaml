@@ -33,11 +33,10 @@ jobs:
           username: gdsmith1
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build Docker image
-        run: docker build -t clockwatch:latest .
-
-      - name: Run tests on Docker image
-        run: docker run clockwatch:latest npm test
+      - name: Build and run tests on Docker image
+        run: |
+          docker build -t clockwatch:latest .
+          docker run clockwatch:latest npm test
 
       - name: Push Docker image
         run: docker buildx build --platform linux/amd64,linux/arm64/v8 -t gdsmith1/clockwatch:latest --push .
