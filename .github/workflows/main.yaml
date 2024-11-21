@@ -35,7 +35,7 @@ jobs:
 
       - name: Build and run tests on Docker image
         run: |
-          docker build -t clockwatch:latest .
+          docker build --load -t clockwatch:latest .
           docker run clockwatch:latest npm test
 
       - name: Push Docker image
