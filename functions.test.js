@@ -166,6 +166,7 @@ describe('handleHelpCommand', () => {
             '`!clockwatch ping` - check if the bot is online\n' +
             '`!clockwatch time [timezone]` - get the current time in a timezone\n' +
             '`!clockwatch timer [duration] [unit]` - set a timer for a duration (e.g., 5 min, 2 hours)\n' +
+            '`!clockwatch soon [unit]` - set a timer for a random duration (seconds for up to 15 minutes, minutes for up to 90 minutes, hours for up to 6 hours )\n' +
             '`!clockwatch show` - shows all active timers and alarms\n' +
             '`!clockwatch reset` - reset all timers'
         );
