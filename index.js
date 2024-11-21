@@ -45,18 +45,16 @@ client.on('messageCreate', async (message) => {
             case 'soon':
                 served = await handleSoonCommand(message, args);
                 break;
+            // case 'alarm':
+            //     served = await handleAlarmCommand(message, args);
+            //     break;
+
             /* 
             alarm command - requires end time, timezone, and message to ping
 
             bell command - requires voice, rings every hour
 
-            soon command - choose mins or hours - random time
-
-            show command - shows all active timers
-
             movespam command - moves a user between channels to spam them
-
-            logs command - shows the logs of the server
             */
             default:
                 served = await handleUnknownCommand(message);

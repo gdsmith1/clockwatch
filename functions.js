@@ -1,8 +1,7 @@
 const { sendMessage } = require('./discord');
 const { v4: uuidv4 } = require('uuid');
 
-
-let activeTimers = [];
+let activeTimers = {};
 
 async function handlePingCommand(message, args) {
     if (args.length < 3) {
@@ -71,7 +70,7 @@ async function handleHelpCommand(message) {
             '`!clockwatch ping` - check if the bot is online\n' +
             '`!clockwatch time [timezone]` - get the current time in a timezone\n' +
             '`!clockwatch timer [duration] [unit]` - set a timer for a duration (e.g., 5 min, 2 hours)\n' +
-            '`!clockwatch show` - show active timers\n' +
+            '`!clockwatch show` - shows all active timers and alarms\n' +
             '`!clockwatch reset` - reset all timers'
         );
         console.log('Help message sent');
@@ -81,6 +80,7 @@ async function handleHelpCommand(message) {
     }
     return true;
 }
+
 async function handleTimerCommand(message, args) {
     if (args.length < 4) {
         try {
@@ -146,10 +146,15 @@ async function handleTimerCommand(message, args) {
     }
 
     const timerId = uuidv4(); // Generate a unique identifier for the timer
+    const serverId = message.guild.id;
+
+    if (!activeTimers[serverId]) {
+        activeTimers[serverId] = [];
+    }
 
     try {
         await sendMessage(message, `Timer set for ${duration} ${unit}.`);
-        activeTimers.push({ id: timerId, user: message.author.username, duration, unit, endTime: Date.now() + milliseconds });
+        activeTimers[serverId].push({ id: timerId, user: message.author.username, duration, unit, endTime: Date.now() + milliseconds });
     }
     catch (error) {
         console.error('Error sending timer message:', error);
@@ -158,10 +163,10 @@ async function handleTimerCommand(message, args) {
 
     setTimeout(async () => {
         try {
-            const timer = activeTimers.find(timer => timer.id === timerId);
+            const timer = activeTimers[serverId].find(timer => timer.id === timerId);
             if (timer) {
                 await sendMessage(message, `<@${message.author.id}> : ${duration} ${unit} have passed.`);
-                activeTimers = activeTimers.filter(timer => timer.endTime > Date.now());
+                activeTimers[serverId] = activeTimers[serverId].filter(timer => timer.endTime > Date.now());
             }
         }
         catch (error) {
@@ -174,14 +179,16 @@ async function handleTimerCommand(message, args) {
 }
 
 async function handleShowCommand(message) {
+    const serverId = message.guild.id;
     try {
-        if (activeTimers.length === 0) {
+        if (!activeTimers[serverId] || activeTimers[serverId].length === 0) {
             await sendMessage(message, 'No active timers.');
         } else {
             let timerList = 'Active timers:\n';
-            activeTimers.forEach(timer => {
+            activeTimers[serverId].forEach(timer => {
                 const timeLeftInMinutes = Math.round((timer.endTime - Date.now()) / 60000); // Convert milliseconds to minutes
-                timerList += `${timer.user}: ${timer.duration} ${timer.unit} (ends in ${timeLeftInMinutes} minutes)\n`;            });
+                timerList += `${timer.user}: ${timer.duration} ${timer.unit} (ends in ${timeLeftInMinutes} minutes)\n`;
+            });
             await sendMessage(message, timerList);
         }
         console.log('Show command message sent');
@@ -193,7 +200,8 @@ async function handleShowCommand(message) {
 }
 
 async function handleResetCommand(message) {
-    activeTimers = [];
+    const serverId = message.guild.id;
+    activeTimers[serverId] = [];
     try {
         await sendMessage(message, 'All timers reset.');
         console.log('Reset command message sent');
@@ -265,10 +273,15 @@ async function handleSoonCommand(message, args) {
     }
 
     const timerId = uuidv4(); // Generate a unique identifier for the timer
+    const serverId = message.guild.id;
+
+    if (!activeTimers[serverId]) {
+        activeTimers[serverId] = [];
+    }
 
     try {
         await sendMessage(message, `Timer set for a random duration of ${duration} ${unitLabel}.`);
-        activeTimers.push({ id: timerId, user: message.author.username, duration, unit: unitLabel, endTime: Date.now() + milliseconds });
+        activeTimers[serverId].push({ id: timerId, user: message.author.username, duration, unit: unitLabel, endTime: Date.now() + milliseconds });
     }
     catch (error) {
         console.error('Error sending timer message:', error);
@@ -277,10 +290,10 @@ async function handleSoonCommand(message, args) {
 
     setTimeout(async () => {
         try {
-            const timer = activeTimers.find(timer => timer.id === timerId);
+            const timer = activeTimers[serverId].find(timer => timer.id === timerId);
             if (timer) {
                 await sendMessage(message, `<@${message.author.id}> : ${duration} ${unitLabel} have passed.`);
-                activeTimers = activeTimers.filter(timer => timer.endTime > Date.now());
+                activeTimers[serverId] = activeTimers[serverId].filter(timer => timer.endTime > Date.now());
             }
         }
         catch (error) {
@@ -292,6 +305,9 @@ async function handleSoonCommand(message, args) {
     return true;
 }
 
+//async function handleAlarmCommand(message, args) {}
+
+
 module.exports = {
     handlePingCommand,
     handleTimeCommand,
@@ -301,4 +317,5 @@ module.exports = {
     handleShowCommand,
     handleResetCommand,
     handleSoonCommand,
+    //handleAlarmCommand,
 };
