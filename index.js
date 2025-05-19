@@ -3,7 +3,7 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
-const { handlePingCommand, handleTimeCommand, handleHelpCommand, handleUnknownCommand, handleTimerCommand, handleShowCommand, handleResetCommand, handleSoonCommand } = require('./functions');
+const { handlePingCommand, handleTimeCommand, handleHelpCommand, handleUnknownCommand, handleTimerCommand, handleShowCommand, handleResetCommand, handleSoonCommand, handleGlobalHelp } = require('./functions');
 
 client.on('ready', () => {
     console.log('I am ready!');
@@ -11,6 +11,17 @@ client.on('ready', () => {
 
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
+
+    // Check for global !help command
+    if (message.content.trim() === '!help') {
+        let served = await handleGlobalHelp(message);
+        if (served) {
+            console.log('Served global help command');
+        } else {
+            console.log('Failed to serve global help command');
+        }
+        return;
+    }
 
     if (message.content.startsWith('!clockwatch')) {
         // Split the message into an array of words

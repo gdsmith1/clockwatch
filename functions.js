@@ -3,6 +3,20 @@ const { v4: uuidv4 } = require('uuid');
 
 let activeTimers = {};
 
+async function handleGlobalHelp(message) {
+    try {
+        await sendMessage(
+            message,
+            'For help with this bot, use `!clockwatch help`.'
+        );
+        console.log('Global help message sent');
+    } catch (error) {
+        console.error('Error sending global help message:', error);
+        return false;
+    }
+    return true;
+}
+
 async function handlePingCommand(message, args) {
     if (args.length < 3) {
         console.log('ping received... pong!');
@@ -318,5 +332,6 @@ module.exports = {
     handleShowCommand,
     handleResetCommand,
     handleSoonCommand,
+    handleGlobalHelp,
     //handleAlarmCommand,
 };
